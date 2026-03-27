@@ -147,7 +147,6 @@ from langchain_community.document_loaders import PyPDFLoader          # načít�
 from langchain_text_splitters import RecursiveCharacterTextSplitter    # dělení textu na chunky
 from langchain_community.embeddings import HuggingFaceEmbeddings      # lokální embedding model
 from langchain_chroma import Chroma                                    # vektorová databáze ChromaDB
-from langchain.chains import RetrievalQA                              # RAG řetězec (retrieval + LLM)
 from langchain_core.prompts import PromptTemplate                     # šablona promptu pro LLM
 from langchain_anthropic import ChatAnthropic                         # Claude LLM od Anthropic
 from langchain_community.retrievers import BM25Retriever              # klíčové vyhledávání (BM25)
