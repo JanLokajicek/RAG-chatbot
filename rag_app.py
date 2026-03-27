@@ -145,7 +145,7 @@ load_dotenv()                      # spustí načtení — musí být před os.g
 
 from langchain_community.document_loaders import PyPDFLoader          # načítání PDF souborů
 from langchain_text_splitters import RecursiveCharacterTextSplitter    # dělení textu na chunky
-from langchain_community.embeddings import HuggingFaceEmbeddings      # lokální embedding model
+from langchain_huggingface import HuggingFaceEmbeddings                # lokální embedding model
 from langchain_chroma import Chroma                                    # vektorová databáze ChromaDB
 from langchain_core.prompts import PromptTemplate                     # šablona promptu pro LLM
 from langchain_anthropic import ChatAnthropic                         # Claude LLM od Anthropic
