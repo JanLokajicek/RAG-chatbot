@@ -210,23 +210,29 @@ def clear_evaluations():
 # RAG chain — cache klíč = hash souborů, každý set má vlastní chroma složku
 # ---------------------------------------------------------------------------
 
-def compute_confidence(vectorstore, answer: str, top_k: int = 3) -> float:
+def compute_confidence(answer: str, source_docs: list) -> float:
     """
-    Měří podobnost odpovědi a chunků v dokumentu — odráží zakotvenost
-    odpovědi ve zdroji, ne podobnost otázky a chunků.
-    Vzorec 1/(1+dist): dist=0 → 100%, dist=1 → 50%, dist=2 → 33%
+    Lexikální překryv: jaká část slov z odpovědi se nachází ve zdrojových chuncích.
+    Odpověď přečtená přímo z dokumentu → vysoké skóre.
+    Odpověď bez opory v dokumentu → nízké skóre.
     """
-    results = vectorstore.similarity_search_with_score(answer[:1000], k=top_k)
-    if not results:
+    if not source_docs or not answer:
         return 0.0
-    scores = [1 / (1 + dist) * 100 for _, dist in results]
-    return round(sum(scores) / len(scores), 1)
+    stop = {"a", "v", "na", "je", "se", "to", "že", "pro", "z", "o", "s",
+            "i", "do", "k", "by", "ale", "nebo", "jako", "při", "po", "za"}
+    source_text = " ".join(doc.page_content for doc in source_docs).lower()
+    source_words = set(source_text.split()) - stop
+    answer_words = [w for w in answer.lower().split() if w not in stop]
+    if not answer_words:
+        return 0.0
+    overlap = sum(1 for w in answer_words if w in source_words) / len(answer_words)
+    return round(overlap * 100, 1)
 
 
 def show_confidence_badge(confidence: float):
-    if confidence >= 40:
+    if confidence >= 70:
         color, label = "#1e7e34", f"✅ Vysoká jistota ({confidence} %)"
-    elif confidence >= 25:
+    elif confidence >= 50:
         color, label = "#856404", f"⚠️ Střední jistota ({confidence} %)"
     else:
         color, label = "#721c24", f"❌ Nízká jistota — ověřte zdroj ({confidence} %)"
@@ -404,7 +410,7 @@ if question := st.chat_input("Napiš otázku k dokumentu…"):
             t0 = time.time()
             answer, source_docs = invoke_answer(retriever, question)
             latency_s = round(time.time() - t0, 1)
-            confidence = compute_confidence(vectorstore, answer) if vectorstore else 0.0
+            confidence = compute_confidence(answer, source_docs)
 
         st.markdown(answer)
         show_confidence_badge(confidence)
