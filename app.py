@@ -212,14 +212,13 @@ def clear_evaluations():
 
 def compute_confidence(vectorstore, question: str, top_k: int = 3) -> float:
     """
-    Vezme top_k L2 vzdálenosti z ChromaDB a převede na procenta (0–100).
-    Normalizované vektory: L2 ∈ [0, 2] → 0 = identické, 2 = opačné.
-    Převod: score = (1 - dist/2) * 100
+    Použije similarity_search_with_relevance_scores — vrátí skóre v [0, 1]
+    bez závislosti na konkrétní distance metrice ChromaDB.
     """
-    results = vectorstore.similarity_search_with_score(question, k=top_k)
+    results = vectorstore.similarity_search_with_relevance_scores(question, k=top_k)
     if not results:
         return 0.0
-    scores = [max(0.0, (1 - dist / 2) * 100) for _, dist in results]
+    scores = [max(0.0, score) * 100 for _, score in results]
     return round(sum(scores) / len(scores), 1)
 
 
