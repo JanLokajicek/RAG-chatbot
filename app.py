@@ -37,7 +37,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 CHROMA_BASE = Path(CHROMA_DIR)
 
 EVAL_CSV = Path("evaluations.csv")
-EVAL_COLUMNS = ["timestamp", "document", "question", "answer", "pages", "rating", "comment", "latency_s"]
+EVAL_COLUMNS = ["timestamp", "document", "question", "answer", "pages", "rating", "comment", "latency_s", "confidence"]
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ def _format_pages(pages: list) -> str:
     return ", ".join(str(p) for p in pages) if pages else ""
 
 
-def save_evaluation(question, answer, pages, rating, comment, document="", latency_s=""):
+def save_evaluation(question, answer, pages, rating, comment, document="", latency_s="", confidence=""):
     write_header = not EVAL_CSV.exists()
     with EVAL_CSV.open("a", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
@@ -161,6 +161,7 @@ def save_evaluation(question, answer, pages, rating, comment, document="", laten
             rating,
             comment,
             latency_s,
+            confidence,
         ])
 
 
@@ -188,6 +189,28 @@ def clear_evaluations():
 # RAG chain — cache klíč = hash souborů, každý set má vlastní chroma složku
 # ---------------------------------------------------------------------------
 
+def compute_confidence(vectorstore, question: str, top_k: int = 3) -> float:
+    """
+    Vezme top_k L2 vzdálenosti z ChromaDB a převede na procenta (0–100).
+    Normalizované vektory: L2 ∈ [0, 2] → 0 = identické, 2 = opačné.
+    Převod: score = (1 - dist/2) * 100
+    """
+    results = vectorstore.similarity_search_with_score(question, k=top_k)
+    if not results:
+        return 0.0
+    scores = [max(0.0, (1 - dist / 2) * 100) for _, dist in results]
+    return round(sum(scores) / len(scores), 1)
+
+
+def show_confidence_badge(confidence: float):
+    if confidence >= 90:
+        st.success(f"✅ Vysoká jistota ({confidence} %)")
+    elif confidence >= 70:
+        st.warning(f"⚠️ Střední jistota ({confidence} %)")
+    else:
+        st.error(f"❌ Nízká jistota — ověřte zdroj ({confidence} %)")
+
+
 @st.cache_resource(show_spinner="Načítám PDF a stavím RAG chain…")
 def get_retriever(paths_hash: str, pdf_paths: tuple):
     all_chunks, doc_info, total_pages = [], [], 0
@@ -206,7 +229,7 @@ def get_retriever(paths_hash: str, pdf_paths: tuple):
 
     retriever = build_retriever(vectorstore, all_chunks)
     _cleanup_old_chroma(keep_hash=paths_hash)
-    return retriever, all_chunks, total_pages, doc_info
+    return retriever, all_chunks, total_pages, doc_info, vectorstore
 
 
 def rebuild_retriever(pdf_paths: list):
@@ -236,9 +259,9 @@ if "evaluated" not in st.session_state:
 
 if st.session_state.pdf_paths:
     current_hash = _paths_hash(tuple(st.session_state.pdf_paths))
-    retriever, chunks, num_pages, doc_info = get_retriever(current_hash, tuple(st.session_state.pdf_paths))
+    retriever, chunks, num_pages, doc_info, vectorstore = get_retriever(current_hash, tuple(st.session_state.pdf_paths))
 else:
-    retriever, chunks, num_pages, doc_info = None, [], 0, []
+    retriever, chunks, num_pages, doc_info, vectorstore = None, [], 0, [], None
 
 # Vygeneruj uvítací zprávu pokud je chat prázdný a dokumenty jsou načteny
 if not st.session_state.messages and doc_info:
@@ -269,7 +292,7 @@ with st.sidebar:
                 st.session_state.pdf_paths.append(str(dest))
                 added.append(uf.name)
         if added:
-            retriever, chunks, num_pages, doc_info = rebuild_retriever(st.session_state.pdf_paths)
+            retriever, chunks, num_pages, doc_info, vectorstore = rebuild_retriever(st.session_state.pdf_paths)
             st.session_state.messages = []
             st.session_state.evaluated = set()
             st.success(f"✅ Přidáno: {', '.join(added)}")
@@ -285,7 +308,7 @@ with st.sidebar:
             if p.parent == UPLOAD_DIR and p.exists():
                 p.unlink()
             if st.session_state.pdf_paths:
-                retriever, chunks, num_pages, doc_info = rebuild_retriever(st.session_state.pdf_paths)
+                retriever, chunks, num_pages, doc_info, vectorstore = rebuild_retriever(st.session_state.pdf_paths)
             else:
                 get_retriever.clear()
             st.session_state.messages = []
@@ -330,6 +353,8 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
+            if "confidence" in msg and msg.get("question"):
+                show_confidence_badge(msg["confidence"])
             if msg.get("pages"):
                 st.caption(f"Zdroje — stránky PDF: {msg['pages']}")
             if msg.get("latency_s"):
@@ -349,8 +374,10 @@ if question := st.chat_input("Napiš otázku k dokumentu…"):
             t0 = time.time()
             answer, source_docs = invoke_answer(retriever, question)
             latency_s = round(time.time() - t0, 1)
+            confidence = compute_confidence(vectorstore, question) if vectorstore else 0.0
 
         st.markdown(answer)
+        show_confidence_badge(confidence)
         pages = sorted({doc.metadata.get("page", "?") + 1 for doc in source_docs}) if source_docs else []
         if pages:
             st.caption(f"Zdroje — stránky PDF: {pages}")
@@ -369,6 +396,7 @@ if question := st.chat_input("Napiš otázku k dokumentu…"):
         "question": question,
         "source_files": source_files,
         "latency_s": latency_s,
+        "confidence": confidence,
     })
 
 # ---------------------------------------------------------------------------
@@ -399,6 +427,7 @@ if assistant_msgs:
                     comment=comment,
                     document=last_msg.get("source_files", ""),
                     latency_s=last_msg.get("latency_s", ""),
+                    confidence=last_msg.get("confidence", ""),
                 )
                 st.session_state.evaluated.add(last_idx)
                 st.rerun()
