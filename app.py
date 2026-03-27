@@ -339,7 +339,7 @@ with st.sidebar:
     st.write(f"**Celkem stránek:** {num_pages}")
     st.write(f"**Celkem chunků:** {len(chunks)}")
 
-    if doc_info and st.button("🔄 Obnovit přehled"):
+    if st.button("🔄 Obnovit přehled"):
         st.session_state.messages = []
         st.session_state.evaluated = set()
         st.rerun()
