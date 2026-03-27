@@ -225,11 +225,15 @@ def compute_confidence(vectorstore, question: str, top_k: int = 3) -> float:
 
 def show_confidence_badge(confidence: float):
     if confidence >= 90:
-        st.success(f"✅ Vysoká jistota ({confidence} %)")
+        color, label = "#1e7e34", f"✅ Vysoká jistota ({confidence} %)"
     elif confidence >= 70:
-        st.warning(f"⚠️ Střední jistota ({confidence} %)")
+        color, label = "#856404", f"⚠️ Střední jistota ({confidence} %)"
     else:
-        st.error(f"❌ Nízká jistota — ověřte zdroj ({confidence} %)")
+        color, label = "#721c24", f"❌ Nízká jistota — ověřte zdroj ({confidence} %)"
+    st.markdown(
+        f'<span style="color:{color};font-size:0.85em;font-weight:600">{label}</span>',
+        unsafe_allow_html=True,
+    )
 
 
 @st.cache_resource(show_spinner="Načítám PDF a stavím RAG chain…")
