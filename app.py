@@ -49,18 +49,25 @@ def build_welcome_message(doc_info: list, chunks: list) -> str:
     Pošle prvních 5000 znaků obsahu dokumentů do Claude,
     který vytvoří hierarchický přehled pojištění.
     """
-    combined = "\n\n".join(c.page_content for c in chunks)[:5000]
+    combined = "\n\n".join(c.page_content for c in chunks)[:8000]
     llm = ChatAnthropic(
         model="claude-haiku-4-5-20251001",
         temperature=0,
         anthropic_api_key=ANTHROPIC_API_KEY,
     )
     response = llm.invoke(
-        "Analyzuj tyto pojistné dokumenty a vytvoř přehled pojištění ve formátu:\n\n"
+        "Analyzuj obsah těchto pojistných dokumentů a vytvoř "
+        "strukturovaný přehled bez markdown nadpisů (bez #).\n\n"
+        "Formát:\n"
         "- Hlavní typ pojištění\n"
-        "  - podkategorie\n"
+        "  - konkrétní podkategorie nebo připojištění\n"
+        "  - konkrétní podkategorie nebo připojištění\n"
+        "- Další hlavní typ\n"
         "  - podkategorie\n\n"
-        "Pouze co je skutečně v dokumentech. Bez dalšího textu.\n\n"
+        "Vypiš pouze co skutečně v dokumentech existuje. "
+        "Buď konkrétní — místo 'pojištění vozidel' napiš "
+        "'povinné ručení', 'havarijní pojištění' atd.\n"
+        "Maximálně 15 řádků celkem.\n\n"
         f"Dokumenty:\n{combined}"
     )
 
