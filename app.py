@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)  # override=True přepíše hodnoty injektované Streamlitem ze secrets.toml
 
 from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from rag_app import (
     load_pdf,
@@ -60,27 +61,30 @@ def build_welcome_message(doc_info: list, chunks: list) -> str:
         temperature=0,
         anthropic_api_key=ANTHROPIC_API_KEY,
     )
-    response = llm.invoke(
-        "Tvým úkolem je vypsat POUZE odrážkový seznam — nic jiného.\n"
-        "První znak tvé odpovědi musí být '-'. Žádný nadpis, žádné 'Přehled', žádný úvod.\n\n"
-        "FORMÁT (dodržuj přesně):\n"
-        "- Hlavní typ pojištění\n"
-        "  - konkrétní připojištění nebo krytí\n"
-        "  - konkrétní připojištění nebo krytí\n"
-        "- Další hlavní typ\n"
-        "  - konkrétní připojištění nebo krytí\n\n"
-        "PRAVIDLA:\n"
-        "- Název hlavního typu: krátce (max 5 slov), bez obecných slov jako 'pojištění X a Y'\n"
-        "- Podkategorie: konkrétní pojmy z dokumentu (limity, typy škod, připojištění, výluky)\n"
-        "- Maximálně 15 řádků celkem\n"
-        "- Pouze to, co skutečně v textu existuje\n\n"
-        f"Text pojistných dokumentů:\n{combined}"
-    )
+    response = llm.invoke([
+        SystemMessage(content=(
+            "Jsi extrakční nástroj. Odpovídáš VÝHRADNĚ odrážkovým seznamem.\n"
+            "Tvá odpověď začíná znakem '-' a neobsahuje nic jiného — žádný nadpis, "
+            "žádné intro, žádné závěrečné věty."
+        )),
+        HumanMessage(content=(
+            "Z textu níže vytvoř hierarchický seznam pojištění.\n\n"
+            "FORMÁT:\n"
+            "- Povinné ručení\n"
+            "  - limit plnění škody na zdraví\n"
+            "  - limit plnění škody na majetku\n"
+            "- Havarijní pojištění\n"
+            "  - allrisk / živelní škody\n"
+            "  - pojištění čelního skla\n\n"
+            "Použij KONKRÉTNÍ názvy z textu. Maximálně 15 řádků.\n\n"
+            f"Text:\n{combined}"
+        )),
+    ])
 
     # Odstraní jakýkoliv řádek co nezačíná '-' (nadpisy, intro text, atd.)
     lines = response.content.strip().splitlines()
     bullet_lines = [l for l in lines if l.startswith("-") or l.startswith("  -")]
-    overview = "\n".join(bullet_lines)
+    overview = "\n".join(bullet_lines) if bullet_lines else response.content.strip()
 
     return (
         "Dobrý den! Mám k dispozici informace o těchto pojištěních:\n\n"
@@ -323,6 +327,11 @@ with st.sidebar:
 
     st.write(f"**Celkem stránek:** {num_pages}")
     st.write(f"**Celkem chunků:** {len(chunks)}")
+
+    if doc_info and st.button("🔄 Obnovit přehled"):
+        st.session_state.messages = []
+        st.session_state.evaluated = set()
+        st.rerun()
 
     st.divider()
 
