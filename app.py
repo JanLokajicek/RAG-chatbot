@@ -224,9 +224,9 @@ def compute_confidence(vectorstore, answer: str, top_k: int = 3) -> float:
 
 
 def show_confidence_badge(confidence: float):
-    if confidence >= 90:
+    if confidence >= 40:
         color, label = "#1e7e34", f"✅ Vysoká jistota ({confidence} %)"
-    elif confidence >= 70:
+    elif confidence >= 25:
         color, label = "#856404", f"⚠️ Střední jistota ({confidence} %)"
     else:
         color, label = "#721c24", f"❌ Nízká jistota — ověřte zdroj ({confidence} %)"
