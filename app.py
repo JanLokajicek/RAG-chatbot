@@ -216,7 +216,7 @@ if not ANTHROPIC_API_KEY:
 # Session state
 if "pdf_paths" not in st.session_state:
     persisted = sorted(UPLOAD_DIR.glob("*.pdf"))
-    st.session_state.pdf_paths = [str(p) for p in persisted] if persisted else [pdf_path]
+    st.session_state.pdf_paths = [str(p) for p in persisted]
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "evaluated" not in st.session_state:
