@@ -144,7 +144,7 @@ from dotenv import load_dotenv     # načte .env soubor do os.environ
 load_dotenv()                      # spustí načtení — musí být před os.getenv()
 
 from langchain_community.document_loaders import PyPDFLoader          # načítání PDF souborů
-from langchain.text_splitter import RecursiveCharacterTextSplitter    # dělení textu na chunky
+from langchain_text_splitters import RecursiveCharacterTextSplitter    # dělení textu na chunky
 from langchain_community.embeddings import HuggingFaceEmbeddings      # lokální embedding model
 from langchain_chroma import Chroma                                    # vektorová databáze ChromaDB
 from langchain.chains import RetrievalQA                              # RAG řetězec (retrieval + LLM)
