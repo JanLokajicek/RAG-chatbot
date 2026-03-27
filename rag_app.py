@@ -14,11 +14,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_anthropic import ChatAnthropic
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
@@ -148,7 +148,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter    # dělen�
 from langchain_community.embeddings import HuggingFaceEmbeddings      # lokální embedding model
 from langchain_chroma import Chroma                                    # vektorová databáze ChromaDB
 from langchain.chains import RetrievalQA                              # RAG řetězec (retrieval + LLM)
-from langchain.prompts import PromptTemplate                          # šablona promptu pro LLM
+from langchain_core.prompts import PromptTemplate                     # šablona promptu pro LLM
 from langchain_anthropic import ChatAnthropic                         # Claude LLM od Anthropic
 from langchain_community.retrievers import BM25Retriever              # klíčové vyhledávání (BM25)
 from langchain.retrievers import EnsembleRetriever                    # kombinuje více retrieverů
