@@ -77,9 +77,14 @@ def build_welcome_message(doc_info: list, chunks: list) -> str:
         f"Text pojistných dokumentů:\n{combined}"
     )
 
+    # Odstraní jakýkoliv řádek co nezačíná '-' (nadpisy, intro text, atd.)
+    lines = response.content.strip().splitlines()
+    bullet_lines = [l for l in lines if l.startswith("-") or l.startswith("  -")]
+    overview = "\n".join(bullet_lines)
+
     return (
         "Dobrý den! Mám k dispozici informace o těchto pojištěních:\n\n"
-        + response.content.strip()
+        + overview
         + "\n\nNa co se chcete zeptat?"
     )
 
