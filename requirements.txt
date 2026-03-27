@@ -1,4 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2+cpu
+sentence-transformers==2.7.0
 streamlit>=1.32.0
 langchain==0.2.16
 langchain-core==0.2.38
@@ -7,7 +9,7 @@ langchain-anthropic==0.1.23
 langchain-chroma==0.1.4
 langchain-text-splitters==0.2.4
 langchain-huggingface==0.0.3
-chromadb==0.5.3
+chromadb==0.4.24
 pypdf==4.3.1
 rank-bm25==0.2.2
 python-dotenv==1.0.1
