@@ -288,8 +288,19 @@ if st.session_state.pdf_paths:
 else:
     retriever, chunks, num_pages, doc_info, vectorstore = None, [], 0, [], None
 
-# Vygeneruj uvítací zprávu pokud je chat prázdný a dokumenty jsou načteny
-if not st.session_state.messages and doc_info:
+WELCOME_VERSION = "v4"  # zvedni číslo → přegenruje uvítací zprávu automaticky
+
+def _needs_welcome_regen() -> bool:
+    """True pokud neexistuje uvítací zpráva nebo pochází ze starší verze kódu."""
+    if not st.session_state.messages:
+        return True
+    first = st.session_state.messages[0]
+    return first.get("role") == "assistant" and first.get("_v") != WELCOME_VERSION
+
+# Vygeneruj uvítací zprávu pokud je chat prázdný nebo zastaralý
+if doc_info and _needs_welcome_regen():
+    # Odstraň starou uvítací zprávu ale zachovej historii chatu
+    non_welcome = [m for m in st.session_state.messages if m.get("question")]
     with st.spinner("Analyzuji dokumenty…"):
         welcome = build_welcome_message(doc_info, chunks)
     st.session_state.messages = [{
@@ -299,7 +310,8 @@ if not st.session_state.messages and doc_info:
         "question": "",
         "source_files": "",
         "latency_s": "",
-    }]
+        "_v": WELCOME_VERSION,
+    }] + non_welcome
 
 # ---------------------------------------------------------------------------
 # Sidebar
