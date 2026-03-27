@@ -272,8 +272,8 @@ def rebuild_retriever(pdf_paths: list):
 # ---------------------------------------------------------------------------
 # Streamlit UI
 # ---------------------------------------------------------------------------
-st.set_page_config(page_title="RAG Chatbot", page_icon="📄", layout="centered")
-st.title("📄 RAG Chatbot")
+st.set_page_config(page_title="Chatbot nad obsahem dokumentů", page_icon="📄", layout="centered")
+st.title("📄 Chatbot nad obsahem dokumentů")
 
 if not ANTHROPIC_API_KEY:
     st.error("Nastav `ANTHROPIC_API_KEY` v `.env` nebo `.streamlit/secrets.toml`.")
