@@ -150,7 +150,7 @@ from langchain_chroma import Chroma                                    # vektoro
 from langchain_core.prompts import PromptTemplate                     # šablona promptu pro LLM
 from langchain_anthropic import ChatAnthropic                         # Claude LLM od Anthropic
 from langchain_community.retrievers import BM25Retriever              # klíčové vyhledávání (BM25)
-from langchain.retrievers import EnsembleRetriever                    # kombinuje více retrieverů
+from langchain.retrievers.ensemble import EnsembleRetriever           # kombinuje více retrieverů
 
 
 # ---------------------------------------------------------------------------
