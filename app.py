@@ -49,31 +49,32 @@ def build_welcome_message(doc_info: list, chunks: list) -> str:
     Pošle prvních 5000 znaků obsahu dokumentů do Claude,
     který vytvoří hierarchický přehled pojištění.
     """
-    combined = "\n\n".join(c.page_content for c in chunks)[:8000]
+    # Vezmi vzorky z celého dokumentu, ne jen začátek — záhlaví kapitol jsou na začátku,
+    # konkrétní připojištění a podmínky jsou dál v textu.
+    step = max(1, len(chunks) // 20)
+    sampled = chunks[::step][:20]
+    combined = "\n\n".join(c.page_content for c in sampled)[:8000]
+
     llm = ChatAnthropic(
         model="claude-haiku-4-5-20251001",
         temperature=0,
         anthropic_api_key=ANTHROPIC_API_KEY,
     )
     response = llm.invoke(
-        "Z níže uvedených pojistných dokumentů vypiš POUZE tento seznam — žádný úvod, "
-        "žádný nadpis, žádný závěr, žádné vysvětlení. Začni rovnou prvním odrážkovým bodem.\n\n"
+        "Tvým úkolem je vypsat POUZE odrážkový seznam — nic jiného.\n"
+        "První znak tvé odpovědi musí být '-'. Žádný nadpis, žádné 'Přehled', žádný úvod.\n\n"
+        "FORMÁT (dodržuj přesně):\n"
+        "- Hlavní typ pojištění\n"
+        "  - konkrétní připojištění nebo krytí\n"
+        "  - konkrétní připojištění nebo krytí\n"
+        "- Další hlavní typ\n"
+        "  - konkrétní připojištění nebo krytí\n\n"
         "PRAVIDLA:\n"
-        "1. Každý hlavní typ pojištění = řádek začínající '- '\n"
-        "2. Každá podkategorie = řádek začínající '  - ' (dvě mezery)\n"
-        "3. Používej KONKRÉTNÍ názvy z dokumentů (např. 'povinné ručení', 'havarijní pojištění', "
-        "'úrazové připojištění řidiče') — NIKDY obecné ('pojištění vozidel', 'pojištění osob')\n"
-        "4. Vypiš jen to, co v dokumentech skutečně existuje\n"
-        "5. Maximálně 15 řádků celkem\n"
-        "6. Žádné markdown znaky (#, **, _)\n\n"
-        "PŘÍKLAD výstupu (pouze pro ukázku formátu):\n"
-        "- Povinné ručení\n"
-        "  - základní limit plnění 100/100 mil. Kč\n"
-        "  - asistenční služba\n"
-        "- Havarijní pojištění\n"
-        "  - allrisk\n"
-        "  - pojištění čelního skla\n\n"
-        f"Dokumenty:\n{combined}"
+        "- Název hlavního typu: krátce (max 5 slov), bez obecných slov jako 'pojištění X a Y'\n"
+        "- Podkategorie: konkrétní pojmy z dokumentu (limity, typy škod, připojištění, výluky)\n"
+        "- Maximálně 15 řádků celkem\n"
+        "- Pouze to, co skutečně v textu existuje\n\n"
+        f"Text pojistných dokumentů:\n{combined}"
     )
 
     return (
