@@ -81,10 +81,21 @@ def build_welcome_message(doc_info: list, chunks: list) -> str:
         )),
     ])
 
-    # Odstraní jakýkoliv řádek co nezačíná '-' (nadpisy, intro text, atd.)
+    # Pokud model nepoužil odrážky, přidáme je sami.
+    # Řádky s odsazením → podkategorie (  -), ostatní → hlavní (-)
     lines = response.content.strip().splitlines()
-    bullet_lines = [l for l in lines if l.startswith("-") or l.startswith("  -")]
-    overview = "\n".join(bullet_lines) if bullet_lines else response.content.strip()
+    result = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("-"):
+            result.append(line)          # model odrážku použil — ponech
+        elif line.startswith((" ", "\t")):
+            result.append("  - " + stripped)   # odsazený řádek → podkategorie
+        else:
+            result.append("- " + stripped)     # normální řádek → hlavní typ
+    overview = "\n".join(result)
 
     return (
         "Dobrý den! Mám k dispozici informace o těchto pojištěních:\n\n"
