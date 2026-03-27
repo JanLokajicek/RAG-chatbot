@@ -50,11 +50,20 @@ def build_welcome_message(doc_info: list, chunks: list) -> str:
     Pošle prvních 5000 znaků obsahu dokumentů do Claude,
     který vytvoří hierarchický přehled pojištění.
     """
-    # Vezmi vzorky z celého dokumentu, ne jen začátek — záhlaví kapitol jsou na začátku,
-    # konkrétní připojištění a podmínky jsou dál v textu.
-    step = max(1, len(chunks) // 20)
-    sampled = chunks[::step][:20]
-    combined = "\n\n".join(c.page_content for c in sampled)[:8000]
+    from langchain_community.retrievers import BM25Retriever
+    # Hledáme chunky obsahující strukturu/obsah dokumentu
+    bm25 = BM25Retriever.from_documents(chunks)
+    bm25.k = 12
+    hits = bm25.get_relevant_documents(
+        "obsah článek pojištění připojištění struktura krytí podmínky"
+    )
+    # Doplníme prvními chunky (TOC bývá na začátku)
+    seen = {c.page_content[:80] for c in hits}
+    for c in chunks[:5]:
+        if c.page_content[:80] not in seen:
+            hits.append(c)
+            seen.add(c.page_content[:80])
+    combined = "\n\n".join(c.page_content for c in hits)[:8000]
 
     llm = ChatAnthropic(
         model="claude-haiku-4-5-20251001",
