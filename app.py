@@ -210,13 +210,13 @@ def clear_evaluations():
 # RAG chain — cache klíč = hash souborů, každý set má vlastní chroma složku
 # ---------------------------------------------------------------------------
 
-def compute_confidence(vectorstore, question: str, top_k: int = 3) -> float:
+def compute_confidence(vectorstore, answer: str, top_k: int = 3) -> float:
     """
-    Vrátí průměrné skóre podobnosti top_k výsledků v procentech.
-    Vzorec 1/(1+dist) funguje pro libovolnou L2 vzdálenost:
-      dist=0 → 100%, dist=1 → 50%, dist=2 → 33%
+    Měří podobnost odpovědi a chunků v dokumentu — odráží zakotvenost
+    odpovědi ve zdroji, ne podobnost otázky a chunků.
+    Vzorec 1/(1+dist): dist=0 → 100%, dist=1 → 50%, dist=2 → 33%
     """
-    results = vectorstore.similarity_search_with_score(question, k=top_k)
+    results = vectorstore.similarity_search_with_score(answer[:1000], k=top_k)
     if not results:
         return 0.0
     scores = [1 / (1 + dist) * 100 for _, dist in results]
@@ -404,7 +404,7 @@ if question := st.chat_input("Napiš otázku k dokumentu…"):
             t0 = time.time()
             answer, source_docs = invoke_answer(retriever, question)
             latency_s = round(time.time() - t0, 1)
-            confidence = compute_confidence(vectorstore, question) if vectorstore else 0.0
+            confidence = compute_confidence(vectorstore, answer) if vectorstore else 0.0
 
         st.markdown(answer)
         show_confidence_badge(confidence)
