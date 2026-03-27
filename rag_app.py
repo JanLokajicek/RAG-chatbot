@@ -150,7 +150,6 @@ from langchain_chroma import Chroma                                    # vektoro
 from langchain_core.prompts import PromptTemplate                     # šablona promptu pro LLM
 from langchain_anthropic import ChatAnthropic                         # Claude LLM od Anthropic
 from langchain_community.retrievers import BM25Retriever              # klíčové vyhledávání (BM25)
-from langchain.retrievers.ensemble import EnsembleRetriever           # kombinuje více retrieverů
 
 
 # ---------------------------------------------------------------------------
@@ -271,10 +270,28 @@ def load_vectorstore(persist_dir: str):
 # KROK 3b — SAMOSTATNÝ RETRIEVER (pro přímé streamování)
 # ---------------------------------------------------------------------------
 
+class _HybridRetriever:
+    """Jednoduchý hybridní retriever — slučuje výsledky vektorového a BM25 vyhledávání."""
+    def __init__(self, vector_retriever, bm25_retriever):
+        self._vec = vector_retriever
+        self._bm25 = bm25_retriever
+
+    def get_relevant_documents(self, query: str):
+        vec_docs = self._vec.get_relevant_documents(query)
+        bm25_docs = self._bm25.get_relevant_documents(query)
+        seen, result = set(), []
+        for doc in vec_docs + bm25_docs:
+            key = doc.page_content[:120]
+            if key not in seen:
+                seen.add(key)
+                result.append(doc)
+        return result[:TOP_K]
+
+
 def build_retriever(vectorstore, chunks):
     """
-    Vrátí hybridní EnsembleRetriever (vektorové podobnosti + BM25).
-    Používá se v app.py pro přímé volání LLM se streamingem.
+    Vrátí hybridní retriever (vektorové podobnosti + BM25).
+    Používá se v app.py pro přímé volání LLM.
     """
     vector_retriever = vectorstore.as_retriever(
         search_type="similarity",
@@ -282,10 +299,7 @@ def build_retriever(vectorstore, chunks):
     )
     bm25_retriever = BM25Retriever.from_documents(chunks)
     bm25_retriever.k = TOP_K
-    return EnsembleRetriever(
-        retrievers=[vector_retriever, bm25_retriever],
-        weights=[0.5, 0.5],
-    )
+    return _HybridRetriever(vector_retriever, bm25_retriever)
 
 
 # ---------------------------------------------------------------------------
